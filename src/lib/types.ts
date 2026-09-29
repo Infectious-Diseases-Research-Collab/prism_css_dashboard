@@ -1,4 +1,4 @@
-export type Mrc = { mrccode: number; short_name: string; district: string; target_hh: number | null };
+export type Mrc = { mrccode: number; mrcname: string; district: string; target_hh: number | null };
 
 type Site = { mrccode: number; mrc: string; district: string };
 

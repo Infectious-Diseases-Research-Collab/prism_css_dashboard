@@ -27,7 +27,7 @@ export function FilterBar({ sites, filters }: { sites: Mrc[]; filters: Filters }
   const districts = [...new Set(sites.map((s) => s.district))].sort();
   const mrcOptions = sites
     .filter((s) => !filters.districts.length || filters.districts.includes(s.district))
-    .sort((a, b) => a.short_name.localeCompare(b.short_name));
+    .sort((a, b) => a.mrcname.localeCompare(b.mrcname));
 
   const today = new Date();
   const daysAgo = (n: number) => new Date(today.getTime() - n * 86_400_000).toISOString().slice(0, 10);
@@ -48,7 +48,7 @@ export function FilterBar({ sites, filters }: { sites: Mrc[]; filters: Filters }
         <MultiSelect
           label="MRC"
           allLabel={filters.districts.length ? "All MRCs in district" : "All MRCs"}
-          options={mrcOptions.map((s) => ({ value: String(s.mrccode), label: s.short_name, hint: s.district }))}
+          options={mrcOptions.map((s) => ({ value: String(s.mrccode), label: s.mrcname, hint: s.district }))}
           selected={filters.mrcs.map(String)}
           onChange={(v) => apply({ mrcs: v.map(Number) })}
         />

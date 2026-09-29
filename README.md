@@ -18,11 +18,11 @@ Only emails in `public.allowed_users` can sign in (email magic link). The `mrcs`
 |---|---|
 | `all` | every MRC |
 | `37,38` | MRC codes (recommended) |
-| `Bala, Aboke` | MRC names (matched to `mrc.short_name` / `mrc.mrcname`, case-insensitive) |
+| `Bala HCIII, Aboke` | MRC names, with or without the facility level (matched to `mrc.mrcname`, case-insensitive) |
 
 This is enforced by Row-Level Security in Postgres (`public.user_mrc_codes()`), so the database only ever returns permitted rows.
 
-MRC codes: Aboke 37, Bala 38, Aduku 41, Apwori 42, Akokoro 40, Otwal 36, Lalogi 27, Awach 25, Patongo 33, Atiak 23, Namokora 31, Kitgum Matidi 32, Amolatar 66, Orum 69, Kyatiri 12, Padibe 29, Koch Goma 21, Diima 14, Buwaiswa 61, Kigandalo 62, Budondo 59, Nawaikoke 56, Morungatuny 47, Busitema 64, Lokolia 43, Nadunget 71.
+MRC codes: Aboke 37, Bala 38, Aduku 41, Apwori 42, Akokoro 40, Otwal 36, Lalogi 27, Awach 25, Patongo 33, Atiak 23, Namokora 31, Kitgum Matidi 32, Amolatar 66, Orum 69, Kyatiri 12, Padibe 29, Koch Goma 21, Diima 14, Buwaiswa 61, Kigandalo 62, Budondo 59, Nawaikoke 56, Morungatuny 47, Busitema 64, Lokolia 43, Nadunget 71 (see `select * from mrc`).
 
 ## Metric definitions
 
@@ -37,13 +37,13 @@ All definitions live in `supabase/migrations/20260929000400_views.sql` (`v_house
 | With / without children 2–10 | enrolled HH with at least one member aged 2–10 / the rest |
 | Excluded (+ reasons) | `enrolled = 0`, broken down by `exclreason` |
 | Not yet closed out | no adult located (`exclreason = 3`) with fewer than 3 visits, or `enrolled` blank |
-| Target HH | `mrc.target_hh`, entered manually |
+| Target HH | `mrc.target_hh` (from `sites_final.csv`; edit in the Table Editor) |
 | HHs with samples drawn | enrolled HH with at least one member with any sample collected |
 | HH pending clinical surveys | enrolled HH with fewer member records than `nmembers` |
 | Samples – BS / FP | members whose `samples_collected` includes 1 (blood smear) / 2 (filter paper) |
 | HH visited by Entomology | not in the survey data, so not shown |
 
-Only the 26 active MRCs are shown (`mrc.active = true`). Records from other MRCs are stored but hidden.
+The `mrc` table holds exactly the 26 surveillance sites (from `sites_final.csv`). Survey records with any other MRC code are stored but never shown.
 
 ## Project layout
 

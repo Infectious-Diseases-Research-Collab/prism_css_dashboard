@@ -20,7 +20,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
 
   const [{ data: access }, { data: mrcs, error: mrcError }, { data: lastSync }] = await Promise.all([
     supabase.from("allowed_users").select("mrcs").maybeSingle(),
-    supabase.from("mrc").select("mrccode, short_name, district, target_hh").eq("active", true).order("district").order("short_name"),
+    supabase.from("mrc").select("mrccode, mrcname, district, target_hh").order("district").order("mrcname"),
     supabase.rpc("last_sync"),
   ]);
   if (mrcError) throw new Error(mrcError.message);
