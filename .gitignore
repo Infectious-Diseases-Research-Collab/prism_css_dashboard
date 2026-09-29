@@ -43,9 +43,8 @@ next-env.d.ts
 # local env files (keep the template)
 !.env.example
 
-# survey data exports (may contain personal data)
-data/*.csv
-data/~$*
+# survey data, exports and working spreadsheets (may contain personal data)
+/data/
 
 # supabase local
 supabase/.temp
