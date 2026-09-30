@@ -13,7 +13,7 @@ export type SurveyRow = Site & {
   samples_bs: number; samples_fp: number;
 };
 export type SurveyPoint = {
-  period: string; enumerated: number; enrolled: number; excluded: number; not_closed_out: number;
+  period: string; enumerated: number; enrolled: number; hh_with_child: number; excluded: number; not_closed_out: number;
   residents: number; hh_with_samples: number; samples_bs: number; samples_fp: number;
 };
 

@@ -36,7 +36,8 @@ All definitions live in `supabase/migrations/20260929000400_views.sql` (`v_house
 | HH residents | `hh_members` records in enrolled households (the KPI also shows the reported `nmembers` total) |
 | With / without children 2–10 | enrolled HH with at least one member aged 2–10 / the rest |
 | Excluded (+ reasons) | `enrolled = 0`, broken down by `exclreason` |
-| Target HH | `mrc.target_hh` (from `sites_final.csv`; edit in the Table Editor) |
+| Target HH | `mrc.target_hh` (50 per MRC; edit in the Table Editor) |
+| % of target | enrolled households **with at least one child aged 2–10** ÷ target. Enrolled households without such a child don't count |
 | HHs with samples drawn | enrolled HH with at least one member with any sample collected |
 | HH pending clinical surveys | enrolled HH with fewer member records than `nmembers` |
 | Samples – BS / FP | members whose `samples_collected` includes 1 (blood smear) / 2 (filter paper) |
