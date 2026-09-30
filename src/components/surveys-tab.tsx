@@ -8,8 +8,8 @@ import { DataTable, type Column } from "./data-table";
 import { Card, ChartGrid, Kpi, KpiRow } from "./ui";
 
 const COLUMNS: Column<SurveyRow>[] = [
-  { label: "HH enumerated", value: (r) => r.enumerated },
-  { label: "HHs approached*", value: (r) => r.approached, title: "Excludes dwellings destroyed/not found and vacant" },
+  { label: "HH visited", value: (r) => r.enumerated, title: "Household records in the survey data (each visited and closed out)" },
+  { label: "HHs approached*", value: (r) => r.approached, title: "Visited households excluding dwellings destroyed/not found and vacant" },
   { label: "HHs enrolled", value: (r) => r.enrolled },
   {
     label: "HH residents",
@@ -26,11 +26,6 @@ const COLUMNS: Column<SurveyRow>[] = [
       value: (r) => r[`excl_${k}` as keyof SurveyRow] as number,
     }),
   ),
-  {
-    label: "Not yet closed out",
-    value: (r) => r.not_closed_out,
-    title: "No adult located with fewer than 3 visits, or enrolment not recorded",
-  },
   { label: "Target HH", value: (r) => r.target_hh, format: (v) => (v ? fmtInt(v as number) : "–") },
   {
     label: "% of target",
@@ -50,7 +45,7 @@ const COLUMNS: Column<SurveyRow>[] = [
 const SUM_KEYS: (keyof SurveyRow & string)[] = [
   "target_hh", "enumerated", "approached", "enrolled", "residents", "residents_reported",
   "hh_with_child", "hh_without_child", "excluded", "excl_1", "excl_2", "excl_3", "excl_4",
-  "excl_5", "excl_6", "not_closed_out", "hh_with_samples", "hh_pending_clinical",
+  "excl_5", "excl_6", "hh_with_samples", "hh_pending_clinical",
   "samples_bs", "samples_fp",
 ];
 
@@ -99,21 +94,21 @@ export function SurveysTab({
   return (
     <div className="space-y-6">
       <KpiRow>
-        <Kpi label="Households enumerated" value={fmtInt(sum(rows, "enumerated"))} detail={`${fmtInt(sum(rows, "approached"))} approached`} />
+        <Kpi label="Households visited" value={fmtInt(sum(rows, "enumerated"))} detail={`${fmtInt(sum(rows, "approached"))} approached (occupied dwellings)`} />
         <Kpi
           label="Households enrolled"
           value={fmtInt(enrolled)}
           detail={target ? `${pct(enrolled, target)} of target (${fmtInt(target)})` : "No targets set yet"}
         />
         <Kpi label="Residents in enrolled HH" value={fmtInt(sum(rows, "residents"))} detail={`${fmtInt(sum(rows, "residents_reported"))} reported`} />
-        <Kpi label="Households excluded" value={fmtInt(sum(rows, "excluded"))} detail={`${fmtInt(sum(rows, "not_closed_out"))} not yet closed out`} />
+        <Kpi label="Households excluded" value={fmtInt(sum(rows, "excluded"))} detail={`${fmtInt(sum(rows, "excl_6"))} refused / no consent`} />
         <Kpi label="Blood smears" value={fmtInt(sum(rows, "samples_bs"))} detail={`${fmtInt(sum(rows, "hh_with_samples"))} HH with samples`} />
         <Kpi label="Filter papers" value={fmtInt(sum(rows, "samples_fp"))} detail={`${fmtInt(sum(rows, "hh_pending_clinical"))} HH pending clinical`} />
       </KpiRow>
 
       <Card
         title="Survey progress by MRC"
-        subtitle="*Approached excludes dwellings destroyed/not found and vacant households. HH visited by Entomology is not captured in the survey data."
+        subtitle="*Approached = visited households excluding dwellings destroyed/not found and vacant. HH visited by Entomology is not captured in the survey data."
       >
         <DataTable rows={rows} columns={COLUMNS} filename="css-survey-progress.csv" sumKeys={SUM_KEYS} />
       </Card>
@@ -129,7 +124,7 @@ export function SurveysTab({
             kind="line"
             series={[
               { key: "enrolled", label: "Enrolled", color: "var(--series-1)" },
-              { key: "enumerated", label: "Enumerated", color: "var(--series-2)" },
+              { key: "enumerated", label: "Visited", color: "var(--series-2)" },
             ]}
             reference={target ? { y: target, label: `Target ${fmtInt(target)}` } : null}
           />

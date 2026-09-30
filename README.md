@@ -30,13 +30,12 @@ All definitions live in `supabase/migrations/20260929000400_views.sql` (`v_house
 
 | Column | Definition |
 |---|---|
-| HH enumerated | all `hh_info` records |
-| HHs approached* | records excluding exclusion reasons 1 (destroyed/not found) and 2 (vacant) |
+| HH visited | all `hh_info` records. Data is only entered when a household is closed out, so every record is a finished visit. (Not the village enumeration exercise.) |
+| HHs approached* | visited households excluding exclusion reasons 1 (destroyed/not found) and 2 (vacant), i.e. occupied dwellings |
 | HHs enrolled | `enrolled = 1` |
 | HH residents | `hh_members` records in enrolled households (the KPI also shows the reported `nmembers` total) |
 | With / without children 2–10 | enrolled HH with at least one member aged 2–10 / the rest |
 | Excluded (+ reasons) | `enrolled = 0`, broken down by `exclreason` |
-| Not yet closed out | no adult located (`exclreason = 3`) with fewer than 3 visits, or `enrolled` blank |
 | Target HH | `mrc.target_hh` (from `sites_final.csv`; edit in the Table Editor) |
 | HHs with samples drawn | enrolled HH with at least one member with any sample collected |
 | HH pending clinical surveys | enrolled HH with fewer member records than `nmembers` |
