@@ -9,6 +9,7 @@ import { SurveysTab } from "@/components/surveys-tab";
 import { MalariaTab } from "@/components/malaria-tab";
 import { NetsTab } from "@/components/nets-tab";
 import { VaccinesTab } from "@/components/vaccines-tab";
+import { DashboardAccessTracker } from "@/components/dashboard-access-tracker";
 
 export default async function DashboardPage({ searchParams }: PageProps<"/">) {
   const filters = parseFilters(await searchParams);
@@ -85,6 +86,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
   return (
     <>
       <Header email={email} lastSync={lastSync as string | null} />
+      <DashboardAccessTracker />
       <div className="z-20 border-b border-line bg-page/95 backdrop-blur md:sticky md:top-0">
         <div className="mx-auto max-w-screen-2xl px-4">
           <FilterBar sites={sites} filters={filters} />

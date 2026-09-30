@@ -95,6 +95,22 @@ To load data locally, run the upload repo against `http://127.0.0.1:54321`.
    - `SUPABASE_SECRET_KEY` (secret/service_role key; server-only, never `NEXT_PUBLIC_`)
 3. Deploy, then add the production URL to Supabase's Site URL / Redirect URLs.
 
+## Dashboard access history
+
+Apply `20261001000200_dashboard_access_daily.sql` before deploying access tracking.
+In Supabase's Table Editor, open `dashboard_access_daily` and sort `access_date`
+descending to see recent visitors. There is one row per user per Kampala calendar
+day, with their email and first/latest dashboard opening timestamps. Timestamp
+columns are stored as `timestamptz`; the editor may display them in UTC.
+
+Records are retained indefinitely. Dashboard users cannot read or write the table
+directly; the authenticated server endpoint records access with the service role.
+Only a full dashboard opening or refresh sends a background tracking request:
+tab switches, filters, prefetching, and idle pages do not. Tracking is best-effort;
+network failures or blocked scripts may leave an opening unrecorded. There is no
+polling or retry, and a page left open overnight does not record a new day until
+reopened or refreshed. Historical access before deployment is not available.
+
 ## Changing metrics
 
 - Change a definition: edit the view in a **new** migration (`create or replace view ...`), then `supabase db push`.
