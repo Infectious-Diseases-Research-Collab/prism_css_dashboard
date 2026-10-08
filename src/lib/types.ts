@@ -39,3 +39,10 @@ export type VaccineRow = Site & {
   r21_card_verified: number; hib_any: number; hib_3: number;
 };
 export type VaccinePoint = { period: string; children_u3: number; r21_any: number; hib_any: number };
+
+// Daily tracker: interviewers' own daily counts (daily_tracker table).
+export type TrackerRow = Site & {
+  days_reported: number; reports: number; approached: number; enrolled: number; last_report: string | null;
+};
+export type TrackerDay = Site & { report_date: string; reports: number; approached: number; enrolled: number };
+export type TrackerPoint = { period: string; approached: number; enrolled: number };

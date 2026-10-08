@@ -9,6 +9,7 @@ import { SurveysTab } from "@/components/surveys-tab";
 import { MalariaTab } from "@/components/malaria-tab";
 import { NetsTab } from "@/components/nets-tab";
 import { VaccinesTab } from "@/components/vaccines-tab";
+import { TrackerTab } from "@/components/tracker-tab";
 import { DashboardAccessTracker } from "@/components/dashboard-access-tracker";
 
 export default async function DashboardPage({ searchParams }: PageProps<"/">) {
@@ -59,6 +60,15 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
 
   let content: React.ReactNode;
   switch (filters.tab) {
+    case "tracker": {
+      const [rows, days, series] = await Promise.all([
+        rpc("tracker_summary", args),
+        rpc("tracker_daily", args),
+        rpc("tracker_timeseries", ts),
+      ]);
+      content = <TrackerTab rows={rows as never} days={days as never} series={series as never} grain={filters.grain} />;
+      break;
+    }
     case "malaria": {
       const [rows, series] = await Promise.all([rpc("malaria_summary", args), rpc("malaria_timeseries", ts)]);
       content = <MalariaTab rows={rows as never} series={series as never} grain={filters.grain} />;
@@ -98,7 +108,10 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
         <p className="text-sm text-ink-2">
           Showing {selectedSites.length === sites.length ? `all ${sites.length}` : selectedSites.length} of your{" "}
           {sites.length} MRC{sites.length === 1 ? "" : "s"}
-          {filters.from || filters.to ? `, surveys ${filters.from ?? "…"} to ${filters.to ?? "…"}` : ""}.
+          {filters.from || filters.to
+            ? `, ${filters.tab === "tracker" ? "reports" : "surveys"} ${filters.from ?? "…"} to ${filters.to ?? "…"}`
+            : ""}
+          .
         </p>
         {content}
       </main>

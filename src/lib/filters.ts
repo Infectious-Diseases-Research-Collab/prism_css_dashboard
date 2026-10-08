@@ -1,7 +1,7 @@
 // Dashboard filters live in the URL (?district=Kole,Apac&mrc=37&from=...&to=...&grain=week&tab=surveys)
 // so every view is shareable and bookmarkable.
 
-export const TABS = ["surveys", "malaria", "nets", "vaccines"] as const;
+export const TABS = ["surveys", "tracker", "malaria", "nets", "vaccines"] as const;
 export type Tab = (typeof TABS)[number];
 export type Grain = "week" | "month";
 

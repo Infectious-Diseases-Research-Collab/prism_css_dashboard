@@ -6,6 +6,7 @@ Next.js (App Router, TypeScript) + Supabase (Postgres, Auth, RLS) dashboard for 
 - **Malaria**: fever, RDT positivity, AL, Hb in under-5s, treatment in last 6 months
 - **Bed nets**: ownership, UCC nets, 1 net per 2 people, slept under a net, brands
 - **Vaccines**: R21 and Hib coverage in children under 3
+- **Daily tracker**: interviewers' own daily counts of households approached and enrolled (the separate daily tracker survey), per report date and MRC, with totals by MRC and a weekly/monthly chart. The date filters apply to `report_date`.
 - Filters (district, MRC, date range, week/month) are kept in the URL, so views can be shared.
 
 Data arrives automatically from DataKollecta (project `prismcss2026`): a scheduled job in this project's Supabase database pulls new and changed records through a read-only **data feed key** every few hours. See [Data sync from DataKollecta](#data-sync-from-datakollecta). The separate upload repo, `../prism_css_upload_to_dashboard`, remains as a manual backup.
@@ -52,8 +53,9 @@ DataKollecta (prismcss2026) --data feed key--> pull-datakollecta (Edge Function)
                                                    ^ pg_cron, every N hours
 ```
 
-- `supabase/functions/pull-datakollecta/` is the sync. It is the generic DataKollecta dashboard function (an identical copy of the one in `new_project_dashboard`); `sync.config.json` maps the four forms and `formchanges` onto this project's existing tables ("typed" mode).
-- Each run reads everything changed since about 10 minutes before the last run, upserts it on `uniqueid`, and deletes records DataKollecta no longer serves (for example ones reclassified as test). Progress is saved after every page, so an interrupted run resumes.
+- The data feed key must cover **both** DataKollecta surveys: the CSS survey and the daily tracker. A form the key can't read is skipped with a warning in `sync_runs.warnings` (`form "daily_tracker" is not readable with this data feed key`).
+- `supabase/functions/pull-datakollecta/` is the sync. It is the generic DataKollecta dashboard function (an identical copy of the one in `new_project_dashboard`); `sync.config.json` maps the four CSS forms, `daily_tracker` and `formchanges` onto this project's tables ("typed" mode).
+- Each run reads everything changed since about 10 minutes before the last run, writes only records that are new or actually changed (`sync_upsert`), and deletes records DataKollecta no longer serves (for example ones reclassified as test). `sync_runs.rows_upserted` therefore counts real inserts and changes, and a table's `synced_at` is when that record last changed here. Progress is saved after every page, so an interrupted run resumes.
 - The schedule lives in this database (`pg_cron`). Nothing depends on GitHub, Vercel or anyone's computer. The DataKollecta key is an Edge Function secret. It is never in the database, the repo or Vercel.
 - The data-quality checks the CSV import used to print (unknown MRC codes, `mrccode`/`hhid` mismatches, orphaned child records) now run after every sync. They are kept in `sync_runs.warnings`, from `sync_quality_warnings()` in `20261009000200_datakollecta_typed_sync.sql`.
 - The header shows two times. **Synced from DataKollecta** is the last successful sync (`last_sync()`): the dashboard is up to date as of then, whether or not that sync found anything new. **Newest record received** is when DataKollecta received the newest record the user can see (`newest_record_received()`, by `submitted_at`): it shows whether the field team is still uploading.

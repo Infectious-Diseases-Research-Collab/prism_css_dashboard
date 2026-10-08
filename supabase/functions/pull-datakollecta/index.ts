@@ -42,7 +42,8 @@ interface SyncConfig {
   tables?: TypedTable[];
   /** Where edit history lands; null to skip it. */
   formchanges?: { table: string; key: string } | null;
-  /** typed mode: a timestamptz column set to now() on every row written. */
+  /** typed mode: a timestamptz column set to now() whenever a row is inserted
+   *  or changes (not on edit-history rows, which keep DataKollecta's own). */
   stamp_column?: string | null;
 }
 
@@ -129,7 +130,9 @@ async function columnsOf(db: SupabaseClient, table: string): Promise<Map<string,
 
 /** Shapes rows for [table]: known, non-generated columns only, coerced.
  *  Columns the feed sends that the table lacks are reported once. */
-async function shape(db: SupabaseClient, table: string, key: string, rows: Row[], run: Run, reported: Set<string>): Promise<Row[]> {
+async function shape(
+  db: SupabaseClient, table: string, key: string, rows: Row[], run: Run, reported: Set<string>, stamp: string | null,
+): Promise<Row[]> {
   const columns = await columnsOf(db, table);
   const out = new Map<string, Row>();
   for (const row of rows) {
@@ -151,17 +154,25 @@ async function shape(db: SupabaseClient, table: string, key: string, rows: Row[]
       if (column.is_generated) continue;
       shaped[name] = coerce(value, column.data_type, `${table}.${name} (${key} ${id})`, run);
     }
-    if (CONFIG.stamp_column && columns.has(CONFIG.stamp_column)) shaped[CONFIG.stamp_column] = new Date().toISOString();
+    if (stamp && columns.has(stamp)) shaped[stamp] = new Date().toISOString();
     out.set(String(id), shaped);
   }
   return [...out.values()];
 }
 
-async function upsert(db: SupabaseClient, table: string, key: string, rows: Row[]): Promise<void> {
+/** Inserts new rows and updates changed ones (sync_upsert); returns how many
+ *  that was. Rows re-read by the overlap but unchanged are left alone and
+ *  not counted, and their stamp column keeps the time they last changed. */
+async function upsert(db: SupabaseClient, table: string, keys: string[], rows: Row[], stamp: string | null): Promise<number> {
+  let changed = 0;
   for (let i = 0; i < rows.length; i += WRITE_BATCH) {
-    const { error } = await db.from(table).upsert(rows.slice(i, i + WRITE_BATCH), { onConflict: key });
+    const { data, error } = await db.rpc("sync_upsert", {
+      p_table: table, p_keys: keys, p_rows: rows.slice(i, i + WRITE_BATCH), p_stamp_column: stamp,
+    });
     if (error) throw new Error(`Upsert into ${table} failed: ${error.message}`);
+    changed += Number(data ?? 0);
   }
+  return changed;
 }
 
 async function feed(params: Record<string, string>): Promise<Record<string, unknown>> {
@@ -175,9 +186,20 @@ async function feed(params: Record<string, string>): Promise<Record<string, unkn
 }
 
 /** The forms to sync and where each lands. */
-async function plan(): Promise<{ form: string; table: string; key: string }[]> {
-  if (CONFIG.mode === "typed") return CONFIG.tables ?? [];
+async function plan(run: Run): Promise<{ form: string; table: string; key: string }[]> {
   const { forms } = await feed({ resource: "forms" }) as { forms: { table_name: string; is_base: boolean }[] };
+  if (CONFIG.mode === "typed") {
+    // A configured form the key cannot read would otherwise just sync
+    // nothing, forever, without a word -- the usual cause is a key made
+    // before that survey existed, or without its survey ticked.
+    const readable = new Set(forms.map((f) => f.table_name));
+    for (const t of CONFIG.tables ?? []) {
+      if (!readable.has(t.form)) {
+        run.warn(`form "${t.form}" is not readable with this data feed key -> skipped (create a key that includes its survey)`);
+      }
+    }
+    return (CONFIG.tables ?? []).filter((t) => readable.has(t.form));
+  }
   // Parents first; one entry per form even if several surveys declare it.
   const ordered = [...forms].sort((a, b) => Number(b.is_base) - Number(a.is_base));
   return [...new Map(ordered.map((f) => [f.table_name, f])).values()]
@@ -226,12 +248,15 @@ async function syncForm(db: SupabaseClient, target: { form: string; table: strin
         };
       })
       : live;
-    const conflict = target.table === "dk_submissions" ? "table_name,local_unique_id" : target.key;
-    const shaped = target.table === "dk_submissions"
-      ? await shape(db, target.table, "local_unique_id", rows, run, reported)
-      : await shape(db, target.table, target.key, rows, run, reported);
-    await upsert(db, target.table, conflict, shaped);
-    run.upserted += shaped.length;
+    const landing = target.table === "dk_submissions";
+    // dk_submissions rows carry synced_at already (built above).
+    const stamp = landing ? "synced_at" : CONFIG.stamp_column ?? null;
+    const shaped = landing
+      ? await shape(db, target.table, "local_unique_id", rows, run, reported, null)
+      : await shape(db, target.table, target.key, rows, run, reported, stamp);
+    run.upserted += landing
+      ? await upsert(db, target.table, ["table_name", "local_unique_id"], shaped, stamp)
+      : await upsert(db, target.table, [target.key], shaped, stamp);
 
     if (gone.length > 0) {
       let del = db.from(target.table).delete({ count: "exact" }).in("local_unique_id", gone);
@@ -269,9 +294,9 @@ async function syncFormchanges(db: SupabaseClient, run: Run) {
     if (cursor) params.cursor = cursor;
     else if (since) params.since = since;
     const page = await feed(params) as { rows: Row[]; next_cursor: string | null; last_changed_at: string | null; has_more: boolean };
-    const shaped = await shape(db, target.table, target.key, page.rows, run, reported);
-    await upsert(db, target.table, target.key, shaped);
-    run.upserted += shaped.length;
+    const shaped = await shape(db, target.table, target.key, page.rows, run, reported, null);
+    // No stamp here: formchanges.synced_at is DataKollecta's own receipt time.
+    run.upserted += await upsert(db, target.table, [target.key], shaped, null);
     if (page.last_changed_at) {
       const { error } = await db.rpc("sync_save_progress", {
         p_resource: resource, p_last_changed_at: page.last_changed_at, p_rows: page.rows.length,
@@ -289,7 +314,7 @@ async function runSync(db: SupabaseClient): Promise<Response> {
 
   const run = new Run();
   try {
-    for (const target of await plan()) {
+    for (const target of await plan(run)) {
       await syncForm(db, target, run);
       if (run.partial) break;
     }

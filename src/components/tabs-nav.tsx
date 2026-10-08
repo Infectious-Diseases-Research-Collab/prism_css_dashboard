@@ -5,6 +5,7 @@ import { TABS, toSearchParams, type Filters } from "@/lib/filters";
 
 const LABELS: Record<(typeof TABS)[number], string> = {
   surveys: "Survey progress",
+  tracker: "Daily tracker",
   malaria: "Malaria",
   nets: "Bed nets",
   vaccines: "Vaccines",
