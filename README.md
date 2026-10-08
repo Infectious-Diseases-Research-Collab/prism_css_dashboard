@@ -8,7 +8,7 @@ Next.js (App Router, TypeScript) + Supabase (Postgres, Auth, RLS) dashboard for 
 - **Vaccines**: R21 and Hib coverage in children under 3
 - Filters (district, MRC, date range, week/month) are kept in the URL, so views can be shared.
 
-Data is loaded by the separate upload repo, `../prism_css_upload_to_dashboard`.
+Data arrives automatically from DataKollecta (project `prismcss2026`): a scheduled job in this project's Supabase database pulls new and changed records through a read-only **data feed key** every few hours. See [Data sync from DataKollecta](#data-sync-from-datakollecta). The separate upload repo, `../prism_css_upload_to_dashboard`, remains as a manual backup.
 
 ## Access control
 
@@ -45,10 +45,45 @@ All definitions live in `supabase/migrations/20260929000400_views.sql` (`v_house
 
 The `mrc` table holds exactly the 26 surveillance sites (from `sites_final.csv`). Survey records with any other MRC code are stored but never shown.
 
+## Data sync from DataKollecta
+
+```
+DataKollecta (prismcss2026) --data feed key--> pull-datakollecta (Edge Function) --> hh_info, hh_members, ... --> dashboard
+                                                   ^ pg_cron, every N hours
+```
+
+- `supabase/functions/pull-datakollecta/` is the sync. It is the generic DataKollecta dashboard function (an identical copy of the one in `new_project_dashboard`); `sync.config.json` maps the four forms and `formchanges` onto this project's existing tables ("typed" mode).
+- Each run reads everything changed since about 10 minutes before the last run, upserts it on `uniqueid`, and deletes records DataKollecta no longer serves (for example ones reclassified as test). Progress is saved after every page, so an interrupted run resumes.
+- The schedule lives in this database (`pg_cron`). Nothing depends on GitHub, Vercel or anyone's computer. The DataKollecta key is an Edge Function secret. It is never in the database, the repo or Vercel.
+- The data-quality checks the CSV import used to print (unknown MRC codes, `mrccode`/`hhid` mismatches, orphaned child records) now run after every sync. They are kept in `sync_runs.warnings`, from `sync_quality_warnings()` in `20261009000200_datakollecta_typed_sync.sql`.
+- The header's "Latest data" is the last successful sync (`last_sync()`).
+
+### Setting it up (once)
+
+1. In DataKollecta, open **PRISM CSS 2026 → Settings → Data feeds** and choose **Create key**. Tick the CSS survey and leave test data off. Copy the key and the feed URL.
+2. Here, run `./scripts/setup.sh`. It links the project, pushes migrations, stores the key as a secret, deploys the function, schedules it (default every 4 hours) and runs the first sync.
+
+### Day to day (SQL Editor)
+
+```sql
+select started_at, status, rows_upserted, rows_deleted, warnings, error
+from sync_runs order by started_at desc limit 10;   -- what happened
+
+select set_sync_interval('6 hours');   -- change the frequency ('30 minutes', '1 day', or a cron expression)
+select set_sync_enabled(false);        -- pause (true to resume)
+select run_sync_now();                 -- sync now, outside the schedule
+```
+
+To replace the key, create a new one in DataKollecta, then run `supabase secrets set DK_FEED_KEY=dkf_...` and revoke the old key.
+
+When the survey adds a question, the sync reports `field "x" is not a column of the table` in `sync_runs.warnings` until you add the column in a migration. Each run only re-reads records that changed, so once the column exists, run `delete from sync_state;` then `select run_sync_now();` to re-read everything and fill it for older records.
+
 ## Project layout
 
 ```
-supabase/migrations/   schema, reference data, RLS, views, dashboard functions (run in order)
+supabase/migrations/   schema, reference data, RLS, views, dashboard functions, sync (run in order)
+supabase/functions/    pull-datakollecta: the scheduled sync from DataKollecta
+scripts/setup.sh       one-time sync setup (key, schedule, first run)
 supabase/seed.sql      local-only test users and targets
 src/app/page.tsx       dashboard (server component; fetches via supabase.rpc)
 src/app/login/         magic-link / code sign-in (checks allowed_users first)
@@ -68,7 +103,13 @@ npm run dev             # http://localhost:3000
 
 `.env.local` points at the local stack (see `.env.example`). Local sign-in emails go to Mailpit at http://127.0.0.1:54324. Test users are in `supabase/seed.sql` (`admin@example.test` sees everything, `bala@example.test` sees Bala only).
 
-To load data locally, run the upload repo against `http://127.0.0.1:54321`.
+To load data locally, run the upload repo against `http://127.0.0.1:54321`, or serve the sync function against a DataKollecta feed:
+
+```bash
+printf 'DK_FEED_URL=...\nDK_FEED_KEY=dkf_...\nCRON_SECRET=local-secret\n' > supabase/.env.functions
+supabase functions serve --env-file supabase/.env.functions
+curl -X POST http://127.0.0.1:54321/functions/v1/pull-datakollecta -H 'x-sync-secret: local-secret' -d '{"action":"run"}'
+```
 
 ## Production setup
 

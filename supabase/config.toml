@@ -412,3 +412,9 @@ enabled = true
 # declarative_schema_path = "./database"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
+
+# pull-datakollecta is called by pg_cron with a shared secret (x-sync-secret),
+# not a Supabase JWT, so the gateway's JWT check is off. The function refuses
+# any request without the secret.
+[functions.pull-datakollecta]
+verify_jwt = false

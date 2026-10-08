@@ -1,0 +1,11 @@
+{
+  "mode": "typed",
+  "tables": [
+    { "form": "hh_info", "table": "hh_info", "key": "uniqueid" },
+    { "form": "sleeping_structure", "table": "sleeping_structure", "key": "uniqueid" },
+    { "form": "hh_members", "table": "hh_members", "key": "uniqueid" },
+    { "form": "nets", "table": "nets", "key": "uniqueid" }
+  ],
+  "formchanges": { "table": "formchanges", "key": "formchanges_uuid" },
+  "stamp_column": "synced_at"
+}
