@@ -19,17 +19,18 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
   const email = auth?.claims?.email as string | undefined;
   if (!email) redirect("/login");
 
-  const [{ data: access }, { data: mrcs, error: mrcError }, { data: lastSync }] = await Promise.all([
+  const [{ data: access }, { data: mrcs, error: mrcError }, { data: lastSync }, { data: newestRecord }] = await Promise.all([
     supabase.from("allowed_users").select("mrcs").maybeSingle(),
     supabase.from("mrc").select("mrccode, mrcname, district, target_hh").order("district").order("mrcname"),
     supabase.rpc("last_sync"),
+    supabase.rpc("newest_record_received"),
   ]);
   if (mrcError) throw new Error(mrcError.message);
 
   if (!access || !mrcs?.length) {
     return (
       <>
-        <Header email={email} lastSync={null} />
+        <Header email={email} lastSync={null} newestRecord={null} />
         <main className="mx-auto max-w-2xl px-4 py-16 text-center">
           <h2 className="text-lg font-semibold">No sites assigned</h2>
           <p className="mt-2 text-ink-2">
@@ -85,7 +86,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
 
   return (
     <>
-      <Header email={email} lastSync={lastSync as string | null} />
+      <Header email={email} lastSync={lastSync as string | null} newestRecord={newestRecord as string | null} />
       <DashboardAccessTracker />
       <div className="z-20 border-b border-line bg-page/95 backdrop-blur md:sticky md:top-0">
         <div className="mx-auto max-w-screen-2xl px-4">

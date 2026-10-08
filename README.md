@@ -56,7 +56,7 @@ DataKollecta (prismcss2026) --data feed key--> pull-datakollecta (Edge Function)
 - Each run reads everything changed since about 10 minutes before the last run, upserts it on `uniqueid`, and deletes records DataKollecta no longer serves (for example ones reclassified as test). Progress is saved after every page, so an interrupted run resumes.
 - The schedule lives in this database (`pg_cron`). Nothing depends on GitHub, Vercel or anyone's computer. The DataKollecta key is an Edge Function secret. It is never in the database, the repo or Vercel.
 - The data-quality checks the CSV import used to print (unknown MRC codes, `mrccode`/`hhid` mismatches, orphaned child records) now run after every sync. They are kept in `sync_runs.warnings`, from `sync_quality_warnings()` in `20261009000200_datakollecta_typed_sync.sql`.
-- The header's "Latest data" is the last successful sync (`last_sync()`).
+- The header shows two times. **Synced from DataKollecta** is the last successful sync (`last_sync()`): the dashboard is up to date as of then, whether or not that sync found anything new. **Newest record received** is when DataKollecta received the newest record the user can see (`newest_record_received()`, by `submitted_at`): it shows whether the field team is still uploading.
 
 ### Setting it up (once)
 
