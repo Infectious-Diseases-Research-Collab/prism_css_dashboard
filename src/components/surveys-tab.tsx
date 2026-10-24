@@ -18,11 +18,16 @@ const COLUMNS: Column<SurveyRow>[] = [
   },
   {
     group: "Enrolled HH",
-    label: "With children 2–10",
+    label: "Count towards target",
     value: (r) => r.hh_with_child,
-    title: "At least one member aged 2–10 (inclusive). Only these households count towards the target.",
+    title: "At least one child aged 2–10 (inclusive) who consented to lab testing and had a sample drawn. Only these households count towards the target.",
   },
-  { group: "Enrolled HH", label: "Without children 2–10", value: (r) => r.hh_without_child },
+  {
+    group: "Enrolled HH",
+    label: "Don't count",
+    value: (r) => r.hh_without_child,
+    title: "No child aged 2–10 who consented and had a sample drawn",
+  },
   { group: "Excluded", label: "Total", value: (r) => r.excluded },
   ...[1, 2, 3, 4, 5, 6].map(
     (k): Column<SurveyRow> => ({
@@ -36,7 +41,7 @@ const COLUMNS: Column<SurveyRow>[] = [
     label: "% of target",
     value: (r) => (r.target_hh ? r.hh_with_child / r.target_hh : null),
     format: (_v, r) => (r.target_hh ? pct(r.hh_with_child, r.target_hh) : "–"),
-    title: "Enrolled households with a child aged 2–10, as % of the target",
+    title: "Enrolled households with a consented, sampled child aged 2–10, as % of the target",
   },
   { label: "HHs with samples drawn", value: (r) => r.hh_with_samples },
   {
@@ -65,7 +70,8 @@ export function SurveysTab({
   grain: "week" | "month";
 }) {
   const enrolled = sum(rows, "enrolled");
-  // Only enrolled households with a member aged 2-10 count towards the target.
+  // Only enrolled households with a child aged 2-10 who consented to lab
+  // testing and had a sample drawn count towards the target (v_household.qualifies_target).
   const qualifying = sum(rows, "hh_with_child");
   const target = sum(rows, "target_hh");
   const sitesWithTarget = rows.filter((r) => r.target_hh).length;
@@ -95,7 +101,7 @@ export function SurveysTab({
           label: r.mrc,
           value: r.hh_with_child / r.target_hh!,
           display: pct(r.hh_with_child, r.target_hh!),
-          note: `${fmtInt(r.hh_with_child)} of ${fmtInt(r.target_hh)} HH with a child 2–10`,
+          note: `${fmtInt(r.hh_with_child)} of ${fmtInt(r.target_hh)} qualifying HH`,
         }))
         .sort((a, b) => b.value - a.value)
     : rows
@@ -107,14 +113,14 @@ export function SurveysTab({
       <KpiRow>
         <Kpi label="Households visited" value={fmtInt(sum(rows, "enumerated"))} detail={`${fmtInt(sum(rows, "approached"))} approached (occupied dwellings)`} />
         <Kpi
-          label="Enrolled HH with a child 2–10"
+          label="HH counting towards target"
           value={fmtInt(qualifying)}
           detail={target ? `${pct(qualifying, target)} of target (${fmtInt(target)})` : "No targets set yet"}
         />
         <Kpi
           label="Households enrolled"
           value={fmtInt(enrolled)}
-          detail={`${fmtInt(enrolled - qualifying)} without a child 2–10`}
+          detail={`${fmtInt(enrolled - qualifying)} enrolled but not counting`}
         />
         <Kpi label="Residents in enrolled HH" value={fmtInt(sum(rows, "residents"))} detail={`${fmtInt(sum(rows, "residents_reported"))} reported`} />
         <Kpi label="Households excluded" value={fmtInt(sum(rows, "excluded"))} detail={`${fmtInt(sum(rows, "excl_6"))} refused / no consent`} />
@@ -127,7 +133,7 @@ export function SurveysTab({
 
       <Card
         title="Survey progress by MRC"
-        subtitle="Target: enrolled households with at least one child aged 2–10. *Approached = visited households excluding dwellings destroyed/not found and vacant. HH visited by Entomology is not captured in the survey data."
+        subtitle="Target: enrolled households with at least one child aged 2–10 who consented to lab testing and had a sample drawn. *Approached = visited households excluding dwellings destroyed/not found and vacant. HH visited by Entomology is not captured in the survey data."
       >
         <DataTable rows={rows} columns={COLUMNS} filename="css-survey-progress.csv" sumKeys={SUM_KEYS} />
       </Card>
@@ -137,7 +143,7 @@ export function SurveysTab({
           title="Cumulative households"
           subtitle={
             target
-              ? `Dashed line: combined target for ${sitesWithTarget} MRC(s), counted in enrolled households with a child 2–10`
+              ? `Dashed line: combined target for ${sitesWithTarget} MRC(s), counted in qualifying households`
               : undefined
           }
         >
@@ -146,7 +152,7 @@ export function SurveysTab({
             grain={grain}
             kind="line"
             series={[
-              { key: "qualifying", label: "Enrolled with child 2–10", color: "var(--series-1)" },
+              { key: "qualifying", label: "Counting towards target", color: "var(--series-1)" },
               { key: "enrolled", label: "Enrolled", color: "var(--series-2)" },
               { key: "enumerated", label: "Visited", color: "var(--series-3)" },
             ]}
@@ -180,10 +186,10 @@ export function SurveysTab({
         </Card>
       </ChartGrid>
       <Card
-        title={sitesWithTarget ? "Progress to target by MRC" : "Enrolled households with a child 2–10 by MRC"}
+        title={sitesWithTarget ? "Progress to target by MRC" : "Qualifying households by MRC"}
         subtitle={
           sitesWithTarget
-            ? "Enrolled households with a child aged 2–10, as % of target"
+            ? "Enrolled households with a consented, sampled child aged 2–10, as % of target"
             : "Set mrc.target_hh in Supabase to show % of target"
         }
       >

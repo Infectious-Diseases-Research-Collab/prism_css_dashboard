@@ -35,10 +35,10 @@ All definitions live in `supabase/migrations/20260929000400_views.sql` (`v_house
 | HHs approached* | visited households excluding exclusion reasons 1 (destroyed/not found) and 2 (vacant), i.e. occupied dwellings |
 | HHs enrolled | `enrolled = 1` |
 | HH residents | `hh_members` records in enrolled households (the KPI also shows the reported `nmembers` total) |
-| With / without children 2–10 | enrolled HH with at least one member aged 2–10 / the rest |
+| Count towards target / Don't count | enrolled HH that qualify for the target (below) / the other enrolled HH |
 | Excluded (+ reasons) | `enrolled = 0`, broken down by `exclreason` |
 | Target HH | `mrc.target_hh` (50 per MRC; edit in the Table Editor) |
-| % of target | enrolled households **with at least one child aged 2–10** ÷ target. Enrolled households without such a child don't count |
+| % of target | **qualifying** households ÷ target. A household qualifies when it is enrolled and at least one child aged 2–10 (the same child) consented to laboratory testing (`consent = 1`, which also means they were at home) and had at least one sample drawn (`samples_collected` includes 1–4). `v_household.qualifies_target`; rule set 2026-10-24 |
 | HHs with samples drawn | enrolled HH with at least one member with any sample collected |
 | HH pending clinical surveys | enrolled HH with fewer member records than `nmembers` |
 | Samples – BS / FP | members whose `samples_collected` includes 1 (blood smear) / 2 (filter paper) |
