@@ -2,8 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 
-// Target of the sign-in email link. Handles both the PKCE "?code=" redirect
-// (default email template) and "?token_hash=&type=" (custom template).
+// Legacy target of the sign-in email link, kept for emails sent before the
+// templates switched to /auth/confirm. It verifies on GET, so mail scanners
+// can use up the token; remove once old links have expired.
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
   const code = searchParams.get("code");
