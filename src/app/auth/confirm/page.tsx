@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 import { confirmSignIn } from "./actions";
+import { ContinueButton } from "./continue-button";
 import { CONFIRM_TYPES } from "./types";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
@@ -23,9 +24,7 @@ export default async function ConfirmPage({ searchParams }: PageProps<"/auth/con
         <form action={confirmSignIn} className="mt-5">
           <input type="hidden" name="token_hash" value={tokenHash} />
           <input type="hidden" name="type" value={type} />
-          <button className="w-full rounded-md bg-accent px-3 py-2 text-sm font-medium text-accent-ink hover:opacity-90">
-            Continue to dashboard
-          </button>
+          <ContinueButton />
         </form>
       </div>
     </main>

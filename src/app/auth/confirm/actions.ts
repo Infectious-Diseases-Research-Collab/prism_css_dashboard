@@ -14,6 +14,11 @@ export async function confirmSignIn(formData: FormData) {
 
   const supabase = await createClient();
   const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
-  if (error) redirect("/login?error=link");
+  if (error) {
+    // A used token is fine if this browser is already signed in, e.g. after a
+    // double click or reopening the link.
+    const { data } = await supabase.auth.getClaims();
+    if (!data?.claims) redirect("/login?error=link");
+  }
   redirect("/");
 }
