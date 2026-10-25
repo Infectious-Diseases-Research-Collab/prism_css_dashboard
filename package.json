@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "signin-link": "node --env-file=.env.local scripts/signin-link.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
