@@ -135,7 +135,14 @@ export function SurveysTab({
         title="Survey progress by MRC"
         subtitle="Target: enrolled households with at least one child aged 2–10 who consented to lab testing and had a sample drawn. *Approached = visited households excluding dwellings destroyed/not found and vacant. HH visited by Entomology is not captured in the survey data."
       >
-        <DataTable rows={rows} columns={COLUMNS} filename="css-survey-progress.csv" sumKeys={SUM_KEYS} />
+        <DataTable
+          rows={rows}
+          columns={COLUMNS}
+          filename="css-survey-progress.csv"
+          sumKeys={SUM_KEYS}
+          subtotals={false}
+          fullHeight
+        />
       </Card>
 
       <ChartGrid>

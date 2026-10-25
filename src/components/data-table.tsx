@@ -15,16 +15,23 @@ export type Column<T> = {
 type Site = { mrccode: number; mrc: string; district: string };
 
 // Per-MRC table grouped by district, with district subtotals, a grand total and CSV export.
+// subtotals={false} lists the MRCs without district subtotal rows; fullHeight
+// shows every row at once instead of scrolling inside a 70vh box (wide tables
+// still scroll sideways on narrow screens).
 export function DataTable<T extends Site>({
   rows,
   columns,
   filename,
   sumKeys,
+  subtotals = true,
+  fullHeight = false,
 }: {
   rows: T[];
   columns: Column<T>[];
   filename: string;
   sumKeys: (keyof T & string)[];
+  subtotals?: boolean;
+  fullHeight?: boolean;
 }) {
   const aggregate = (rs: T[], label: string): T => {
     const out = { mrccode: -1, mrc: label, district: "" } as T;
@@ -40,7 +47,7 @@ export function DataTable<T extends Site>({
   for (const d of districts) {
     const rs = rows.filter((r) => r.district === d);
     rs.forEach((row) => body.push({ row, kind: "mrc" }));
-    if (multiDistrict && rs.length > 1) body.push({ row: aggregate(rs, `${d} subtotal`), kind: "subtotal" });
+    if (subtotals && multiDistrict && rs.length > 1) body.push({ row: aggregate(rs, `${d} subtotal`), kind: "subtotal" });
   }
   const total = aggregate(rows, "Total");
   const show = (c: Column<T>, r: T) => {
@@ -71,7 +78,7 @@ export function DataTable<T extends Site>({
           Download CSV
         </button>
       </div>
-      <div className="max-h-[70vh] overflow-auto rounded-lg border border-line">
+      <div className={`${fullHeight ? "overflow-x-auto" : "max-h-[70vh] overflow-auto"} rounded-lg border border-line`}>
         <table className="tabular w-full border-collapse text-sm">
           <thead className="sticky top-0 z-10 bg-surface-2">
             {hasGroups && (
